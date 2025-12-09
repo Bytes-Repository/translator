@@ -1,7 +1,6 @@
 use std::env;
-use std::fs::{self, File};
-use std::io::{self, BufRead, Write};
-use std::path::{Path, PathBuf};
+use std::fs;
+use std::io;
 use std::process::{Command, Stdio};
 use tempfile::{tempdir, TempDir};
 
@@ -56,10 +55,10 @@ fn extract_blocks(content: &str, verbose: bool) -> Vec<(String, String)> {
                     }
                     if depth == 0 {
                         let code_trimmed = code.trim().to_string();
-                        blocks.push((lang, code_trimmed));
                         if verbose {
                             println!("Extracted {} block", lang);
                         }
+                        blocks.push((lang, code_trimmed));
                     } else {
                         if verbose {
                             eprintln!("Unclosed block for {}", lang);
@@ -79,16 +78,16 @@ fn execute_code(lang: &str, code: &str, verbose: bool) -> Result<String, Box<dyn
     if verbose {
         println!("Temp dir: {:?}", dir.path());
     }
-    match lang.as_str() {
-        "rust" => execute_rust(code, &dir, verbose),
-        "java" => execute_java(code, &dir, verbose),
-        "python" => execute_python(code, verbose),
-        "go" => execute_go(code, &dir, verbose),
+    match lang {
+        "rust" => execute_rust(code, &dir),
+        "java" => execute_java(code, &dir),
+        "python" => execute_python(code),
+        "go" => execute_go(code, &dir),
         _ => Err(format!("Unsupported language: {}", lang).into()),
     }
 }
 
-fn execute_rust(code: &str, dir: &TempDir, verbose: bool) -> Result<String, Box<dyn std::error::Error>> {
+fn execute_rust(code: &str, dir: &TempDir) -> Result<String, Box<dyn std::error::Error>> {
     let file_path = dir.path().join("main.rs");
     fs::write(&file_path, code)?;
     let output = Command::new("rustc")
@@ -114,7 +113,7 @@ fn execute_rust(code: &str, dir: &TempDir, verbose: bool) -> Result<String, Box<
     }
 }
 
-fn execute_java(code: &str, dir: &TempDir, verbose: bool) -> Result<String, Box<dyn std::error::Error>> {
+fn execute_java(code: &str, dir: &TempDir) -> Result<String, Box<dyn std::error::Error>> {
     let file_path = dir.path().join("Main.java");
     fs::write(&file_path, code)?;
     let output = Command::new("javac")
@@ -141,7 +140,7 @@ fn execute_java(code: &str, dir: &TempDir, verbose: bool) -> Result<String, Box<
     }
 }
 
-fn execute_python(code: &str, verbose: bool) -> Result<String, Box<dyn std::error::Error>> {
+fn execute_python(code: &str) -> Result<String, Box<dyn std::error::Error>> {
     let output = Command::new("python")
         .arg("-c")
         .arg(code)
@@ -156,7 +155,7 @@ fn execute_python(code: &str, verbose: bool) -> Result<String, Box<dyn std::erro
     }
 }
 
-fn execute_go(code: &str, dir: &TempDir, verbose: bool) -> Result<String, Box<dyn std::error::Error>> {
+fn execute_go(code: &str, dir: &TempDir) -> Result<String, Box<dyn std::error::Error>> {
     let file_path = dir.path().join("main.go");
     fs::write(&file_path, code)?;
     let output = Command::new("go")
